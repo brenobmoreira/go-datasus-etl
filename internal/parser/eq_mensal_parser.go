@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/brenobmoreira/go-datasus-etl/internal/entities"
 	"github.com/valentin-kaiser/go-dbase/dbase"
@@ -70,11 +71,13 @@ func EquipamentoParser(archive_name string, blast string, dir string) {
 func WriteEquipamento(file *os.File, equipChan chan entities.Equipamentos) {
 	w := csv.NewWriter(file)
 	for r := range equipChan {
+		qtdeExistenteStr := strconv.FormatInt(r.QuantidadeExistente, 10)
+		qtdeEmUsoStr := strconv.FormatInt(r.QuantidadeUso, 10)
 		record := []string{
 			r.ID,
 			r.CodigoEquipamento,
-			r.QuantidadeExistente,
-			r.QuantidadeUso,
+			qtdeExistenteStr,
+			qtdeEmUsoStr,
 		}
 		if err := w.Write(record); err != nil {
 			panic(err)

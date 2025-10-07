@@ -8,8 +8,8 @@ type Estabelecimento struct {
 type Equipamentos struct {
 	ID                  string `dbase:"CNES"`
 	CodigoEquipamento   string `dbase:"TIPEQUIP"`
-	QuantidadeExistente string `dbase:"QT_EXIST"`
-	QuantidadeUso       string `dbase:"QT_USO"`
+	QuantidadeExistente int64  `dbase:"QT_EXIST"`
+	QuantidadeUso       int64  `dbase:"QT_USO"`
 }
 
 type EstabelecimentoCadastro struct {
