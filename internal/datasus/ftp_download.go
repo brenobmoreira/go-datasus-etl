@@ -26,7 +26,7 @@ func DownloadDBC(infos []Info) error {
 	st_eq := []string{"ST", "EQ"}
 	for i := range st_eq {
 		cadastro := st_eq[i]
-		download := "data/" + cadastro + "/"
+		download := "data/dbc/" + cadastro + "/"
 		initial := "/dissemin/publicos/CNES/200508_/Dados/" + cadastro + "/"
 		for j := range infos {
 			archive_name := cadastro + infos[j].UF + infos[j].Ano + infos[j].Mes + ".dbc"
