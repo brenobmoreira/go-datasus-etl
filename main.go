@@ -25,7 +25,9 @@ func main() {
 	}
 
 	archive_name := "ST/STSC2501"
+	archive_eq := "EQ/EQSC2501"
 	blast_path := filepath.Join(rootDir, "internal", "parser", "blast-dbf")
 
 	parser.EstabelecimentoParser(archive_name, blast_path, rootDir)
+	parser.EquipamentoParser(archive_eq, blast_path, rootDir)
 }
