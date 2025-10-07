@@ -43,7 +43,7 @@ func EstabelecimentoParser(archive_name string, blast string, dir string) {
 	var line uint32
 
 	estabChan := make(chan entities.Estabelecimento)
-	go WriteChan(file, estabChan)
+	go WriteEstabelecimento(file, estabChan)
 
 	for !table.EOF() {
 		line++
@@ -67,7 +67,7 @@ func EstabelecimentoParser(archive_name string, blast string, dir string) {
 	}
 }
 
-func WriteChan(file *os.File, estabChan chan entities.Estabelecimento) {
+func WriteEstabelecimento(file *os.File, estabChan chan entities.Estabelecimento) {
 	w := csv.NewWriter(file)
 	for r := range estabChan {
 		record := []string{
