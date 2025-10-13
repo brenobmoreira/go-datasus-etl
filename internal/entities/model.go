@@ -13,12 +13,9 @@ type Equipamentos struct {
 }
 
 type EstabelecimentoCadastro struct {
-	ID         string `dbase:"CNES"`
-	Nome       string `dbase:"FANTASIA"`
-	Logradouro string `dbase:"NO_LOGRAD"`
-	Numero     string `dbase:"NUMERO_END"`
-	Bairro     string `dbase:"NO_BAIRRO"`
-	CEP        string `dbase:"CO_CEP"`
+	ID       string `dbase:"CNES"`
+	Nome     string `dbase:"FANTASIA"`
+	Excluido string `dbase:"EXCLUIDO"`
 }
 
 type EquipamentoDescricao struct {
