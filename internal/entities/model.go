@@ -22,6 +22,6 @@ type EstabelecimentoCadastro struct {
 }
 
 type EquipamentoDescricao struct {
-	Codigo    string `dbase:"TIPEQUIP"`
-	Descricao string `dbase:"DS_TPEQUIP"`
+	CodigoEquipamento string `dbase:"CHAVE"`
+	Descricao         string `dbase:"DS_TPEQUIP"`
 }
