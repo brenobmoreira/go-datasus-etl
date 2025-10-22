@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/brenobmoreira/go-datasus-etl/internal/entities"
 	"github.com/valentin-kaiser/go-dbase/dbase"
 )
 
-func EstabelecimentoParser(archive_name string, blast string, dir string) {
+func EstabelecimentoParser(archive_name string, blast string, dir string, competencia time.Time, estabChan chan<- entities.Estabelecimento) {
+	defer close(estabChan)
+
 	dbf_path := dir + "/data/dbf/" + archive_name + ".dbf"
 	dbc_path := dir + "/data/dbc/" + archive_name + ".dbc"
 	outputDir := filepath.Dir(dbf_path)
@@ -41,9 +44,6 @@ func EstabelecimentoParser(archive_name string, blast string, dir string) {
 	defer file.Close()
 
 	var line uint32
-
-	estabChan := make(chan entities.Estabelecimento)
-	go WriteEstabelecimento(file, estabChan)
 
 	for !table.EOF() {
 		line++

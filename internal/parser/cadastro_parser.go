@@ -10,7 +10,7 @@ import (
 	"github.com/valentin-kaiser/go-dbase/dbase"
 )
 
-func CadastroParser(archive_name string, blast string, dir string) {
+func CadastroParser(archive_name string, blast string, dir string, cadastroChan chan entities.EstabelecimentoCadastro) {
 	dbf_path := dir + "/assets/" + archive_name + ".dbf"
 	outputDir := filepath.Dir(dbf_path)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -35,9 +35,6 @@ func CadastroParser(archive_name string, blast string, dir string) {
 	defer file.Close()
 
 	var line uint32
-
-	cadastroChan := make(chan entities.EstabelecimentoCadastro)
-	go WriteCadastro(file, cadastroChan)
 
 	for !table.EOF() {
 		line++
