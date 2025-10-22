@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/jlaffaye/ftp v0.2.0
+	github.com/lib/pq v1.10.9
 	github.com/valentin-kaiser/go-dbase v1.13.0
 )
 
