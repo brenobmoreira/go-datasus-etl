@@ -1,6 +1,8 @@
 package entities
 
-import "time"
+import (
+	"time"
+)
 
 type Estabelecimento struct {
 	ID              string `dbase:"CNES"`
@@ -25,4 +27,9 @@ type EstabelecimentoCadastro struct {
 type EquipamentoDescricao struct {
 	CodigoEquipamento string `dbase:"CHAVE"`
 	Descricao         string `dbase:"DS_TPEQUIP"`
+}
+
+type EquipamentoDescricaoJSON struct {
+	CodigoEquipamento string `json:"cod"`
+	Descricao         string `json:"descricao"`
 }

@@ -10,8 +10,10 @@ import (
 
 	"github.com/brenobmoreira/go-datasus-etl/internal/datasus"
 	"github.com/brenobmoreira/go-datasus-etl/internal/entities"
+	"github.com/brenobmoreira/go-datasus-etl/internal/handlers"
 	"github.com/brenobmoreira/go-datasus-etl/internal/parser"
 	"github.com/brenobmoreira/go-datasus-etl/internal/repository"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -33,6 +35,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	router := gin.Default()
+	router.GET("/descricoes", handlers.GetDescricoes(&repo))
+	router.Run(":8080")
 
 	competencia := time.Now()
 	var wg sync.WaitGroup
