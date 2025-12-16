@@ -67,3 +67,22 @@ func (r *Repo) SalvarDescricao(dc chan entities.EquipamentoDescricao) error {
 	}
 	return nil
 }
+
+func (r *Repo) ListarDescricoes() ([]entities.EquipamentoDescricao, error) {
+	rows, err := r.db.Query("SELECT codigo, descricao FROM equipamento_descricao ORDER BY codigo")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var descricoes []entities.EquipamentoDescricao
+	for rows.Next() {
+		var desc entities.EquipamentoDescricao
+		if err := rows.Scan(&desc.CodigoEquipamento, &desc.Descricao); err != nil {
+			return nil, err
+		}
+		descricoes = append(descricoes, desc)
+	}
+
+	return descricoes, rows.Err()
+}
