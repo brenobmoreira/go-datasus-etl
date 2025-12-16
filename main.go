@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/brenobmoreira/go-datasus-etl/internal/datasus"
 	"github.com/brenobmoreira/go-datasus-etl/internal/entities"
@@ -33,7 +34,7 @@ func main() {
 		panic(err)
 	}
 
-	// competencia := time.Date(2024, 01, 01, 0, 0, 0, 0, time.UTC)
+	competencia := time.Now()
 	var wg sync.WaitGroup
 	blast_path := filepath.Join(rootDir, "internal", "parser", "blast-dbf")
 
@@ -45,16 +46,21 @@ func main() {
 		}
 	})
 	parser.CadastroParser(archive_cd, blast_path, rootDir, cadastroChan)
-	fmt.Println("Cadastro updated")
+	close(cadastroChan)
+	wg.Wait()
+	fmt.Println("Cadastro processado com sucesso!")
 
-	// estabChan := make(chan entities.Estabelecimento)
-	// archive_st := "ST/STSC2501"
-	// wg.Go(func() {
-	// 	if err := repo.SalvarEstabelecimento(estabChan); err != nil {
-	// 		panic(err)
-	// 	}
-	// })
-	// parser.EstabelecimentoParser(archive_st, blast_path, rootDir, competencia, estabChan)
+	estabChan := make(chan entities.Estabelecimento)
+	archive_st := "ST/STSC2501"
+	wg.Go(func() {
+		if err := repo.SalvarEstabelecimento(estabChan); err != nil {
+			panic(err)
+		}
+	})
+	parser.EstabelecimentoParser(archive_st, blast_path, rootDir, competencia, estabChan)
+	close(estabChan)
+	wg.Wait()
+	fmt.Println("Estabelecimentos processados com sucesso!")
 
 	// archive_eq := "EQ/EQSC2501"
 	// archive_desc := "TP_EQUIPAM"
