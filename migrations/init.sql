@@ -26,5 +26,5 @@ CREATE TABLE equipamento (
     quantidade_existente INTEGER,
     quantidade_uso INTEGER,
     competencia DATE,
-    PRIMARY KEY (cnes, competencia)
+    PRIMARY KEY (cnes, codigo_equipamento, competencia) 
 );
