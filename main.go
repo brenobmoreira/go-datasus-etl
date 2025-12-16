@@ -73,4 +73,16 @@ func main() {
 	close(equipChan)
 	wg.Wait()
 	fmt.Println("Equipamentos processados com sucesso!")
+
+	descricaoChan := make(chan entities.EquipamentoDescricao)
+	archive_desc := "TP_EQUIPAM"
+	wg.Go(func() {
+		if err := repo.SalvarDescricao(descricaoChan); err != nil {
+			panic(err)
+		}
+	})
+	parser.DescricaoParser(archive_desc, blast_path, rootDir, descricaoChan)
+	close(descricaoChan)
+	wg.Wait()
+	fmt.Println("Descrições processadas com sucesso!")
 }

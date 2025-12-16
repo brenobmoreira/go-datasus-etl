@@ -57,8 +57,13 @@ func (r *Repo) SalvarCadastro(cd chan entities.EstabelecimentoCadastro) error {
 	return nil
 }
 
-func (r *Repo) SalvarDescricao(st entities.EquipamentoDescricao) error {
-	sql := `INSERT INTO equipamento_descricao (codigo_equipamento, descricao) VALUES ($1, $2)`
-	_, err := r.db.Exec(sql, st.CodigoEquipamento, st.Descricao)
-	return err
+func (r *Repo) SalvarDescricao(dc chan entities.EquipamentoDescricao) error {
+	sql := `INSERT INTO equipamento_descricao (codigo, descricao) VALUES ($1, $2) ON CONFLICT (codigo) DO NOTHING`
+	for wt := range dc {
+		_, err := r.db.Exec(sql, wt.CodigoEquipamento, wt.Descricao)
+		if err != nil {
+			fmt.Printf("Erro ao inserir descrição %s (%s): %v\n", wt.CodigoEquipamento, wt.Descricao, err)
+		}
+	}
+	return nil
 }

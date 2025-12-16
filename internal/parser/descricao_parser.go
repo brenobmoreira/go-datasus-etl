@@ -10,7 +10,7 @@ import (
 	"github.com/valentin-kaiser/go-dbase/dbase"
 )
 
-func DescricaoParser(archive_name string, blast string, dir string) {
+func DescricaoParser(archive_name string, blast string, dir string, descricaoChan chan<- entities.EquipamentoDescricao) {
 	dbf_path := dir + "/assets/" + archive_name + ".dbf"
 	outputDir := filepath.Dir(dbf_path)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -35,9 +35,6 @@ func DescricaoParser(archive_name string, blast string, dir string) {
 	defer file.Close()
 
 	var line uint32
-
-	descricaoChan := make(chan entities.EquipamentoDescricao)
-	go WriteDescricao(file, descricaoChan)
 
 	for !table.EOF() {
 		line++
