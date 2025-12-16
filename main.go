@@ -62,8 +62,15 @@ func main() {
 	wg.Wait()
 	fmt.Println("Estabelecimentos processados com sucesso!")
 
-	// archive_eq := "EQ/EQSC2501"
-	// archive_desc := "TP_EQUIPAM"
-	// parser.EquipamentoParser(archive_eq, blast_path, rootDir)
-	// parser.DescricaoParser(archive_desc, blast_path, rootDir)
+	equipChan := make(chan entities.Equipamentos)
+	archive_eq := "EQ/EQSC2501"
+	wg.Go(func() {
+		if err := repo.SalvarEquipamento(equipChan); err != nil {
+			panic(err)
+		}
+	})
+	parser.EquipamentoParser(archive_eq, blast_path, rootDir, competencia, equipChan)
+	close(equipChan)
+	wg.Wait()
+	fmt.Println("Equipamentos processados com sucesso!")
 }

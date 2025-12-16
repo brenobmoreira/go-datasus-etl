@@ -35,10 +35,15 @@ func (r *Repo) SalvarEstabelecimento(st chan entities.Estabelecimento) error {
 	return nil
 }
 
-func (r *Repo) SalvarEquipamento(eq entities.Equipamentos) error {
+func (r *Repo) SalvarEquipamento(eq chan entities.Equipamentos) error {
 	sql := `INSERT INTO equipamento (cnes, codigo_equipamento, quantidade_existente, quantidade_uso, competencia) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (cnes, competencia) DO NOTHING`
-	_, err := r.db.Exec(sql, eq.ID, eq.CodigoEquipamento, eq.QuantidadeExistente, eq.QuantidadeUso)
-	return err
+	for wt := range eq {
+		_, err := r.db.Exec(sql, wt.ID, wt.CodigoEquipamento, wt.QuantidadeExistente, wt.QuantidadeUso, wt.Competencia)
+		if err != nil {
+			fmt.Printf("Erro ao inserir equipamento %s (%s): %v\n", wt.ID, wt.CodigoEquipamento, err)
+		}
+	}
+	return nil
 }
 
 func (r *Repo) SalvarCadastro(cd chan entities.EstabelecimentoCadastro) error {
