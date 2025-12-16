@@ -25,11 +25,11 @@ func OpenConn(connection string) (Repo, error) {
 }
 
 func (r *Repo) SalvarEstabelecimento(st chan entities.Estabelecimento) error {
-	sql := `INSERT INTO estabelecimento (cnes, codigo_municipio, competencia) VALUES ($1, $2, $3)`
+	sql := `INSERT INTO estabelecimento (cnes, codigo_municipio, competencia) VALUES ($1, $2, $3) ON CONFLICT (cnes, competencia) DO NOTHING`
 	for wt := range st {
 		_, err := r.db.Exec(sql, wt.ID, wt.CodigoMunicipio, wt.Competencia)
 		if err != nil {
-			fmt.Printf("Erro ao inserir %s, %v", wt.ID, wt.CodigoMunicipio)
+			fmt.Printf("Erro ao inserir estabelecimento %s (%s): %v\n", wt.ID, wt.CodigoMunicipio, err)
 		}
 	}
 	return nil
@@ -42,11 +42,11 @@ func (r *Repo) SalvarEquipamento(eq entities.Equipamentos) error {
 }
 
 func (r *Repo) SalvarCadastro(cd chan entities.EstabelecimentoCadastro) error {
-	sql := `INSERT INTO estabelecimento_cadastro (cnes, nome) VALUES ($1, $2) ON CONFLICT (cnes) DO UPDATE SET cnes = EXCLUDED.cnes, nome = EXCLUDED.nome;`
+	sql := `INSERT INTO estabelecimento_cadastro (cnes, nome) VALUES ($1, $2) ON CONFLICT (cnes) DO NOTHING`
 	for wt := range cd {
 		_, err := r.db.Exec(sql, wt.ID, wt.Nome)
 		if err != nil {
-			fmt.Println("Erro ao inserir: ", wt.ID, wt.Nome, err)
+			fmt.Printf("Erro ao inserir cadastro %s (%s): %v\n", wt.ID, wt.Nome, err)
 		}
 	}
 	return nil
