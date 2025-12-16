@@ -12,8 +12,6 @@ import (
 )
 
 func EstabelecimentoParser(archive_name string, blast string, dir string, competencia time.Time, estabChan chan<- entities.Estabelecimento) {
-	defer close(estabChan)
-
 	dbf_path := dir + "/data/dbf/" + archive_name + ".dbf"
 	dbc_path := dir + "/data/dbc/" + archive_name + ".dbc"
 	outputDir := filepath.Dir(dbf_path)
