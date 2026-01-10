@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/brenobmoreira/go-datasus-etl/internal/entities"
 
@@ -85,4 +86,24 @@ func (r *Repo) ListarDescricoes() ([]entities.EquipamentoDescricao, error) {
 	}
 
 	return descricoes, rows.Err()
+}
+
+func (r *Repo) ListarEstabelecimentoCidade(codigo string) ([]string, error) {
+	rows, err := r.db.Query("SELECT e.cnes, ec.nome, e.codigo_municipio, e.competencia FROM estabelecimento e JOIN estabelecimento_cadastro ec ON e.cnes = ec.cnes WHERE e.codigo_municipio = $1", codigo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nomes []string
+	for rows.Next() {
+		var cnes, nome, codigoMunicipio string
+		var competencia time.Time
+		if err := rows.Scan(&cnes, &nome, &codigoMunicipio, &competencia); err != nil {
+			return nil, err
+		}
+		nomes = append(nomes, nome)
+	}
+
+	return nomes, rows.Err()
 }

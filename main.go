@@ -28,5 +28,6 @@ func main() {
 	router := gin.Default()
 	router.GET("/descricoes", handlers.GetDescricoes(&repo))
 	router.GET("/sync", handlers.SyncDatabase(&repo))
+	router.GET("/estabelecimento/:id", handlers.GetEstabelecimentosCidade(&repo))
 	router.Run(":8080")
 }
