@@ -88,22 +88,24 @@ func (r *Repo) ListarDescricoes() ([]entities.EquipamentoDescricao, error) {
 	return descricoes, rows.Err()
 }
 
-func (r *Repo) ListarEstabelecimentoCidade(codigo string) ([]string, error) {
+func (r *Repo) ListarEstabelecimentoCidade(codigo string) ([][]string, error) {
 	rows, err := r.db.Query("SELECT e.cnes, ec.nome, e.codigo_municipio, e.competencia FROM estabelecimento e JOIN estabelecimento_cadastro ec ON e.cnes = ec.cnes WHERE e.codigo_municipio = $1", codigo)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var nomes []string
+	var estabelecimentos [][]string
 	for rows.Next() {
 		var cnes, nome, codigoMunicipio string
 		var competencia time.Time
 		if err := rows.Scan(&cnes, &nome, &codigoMunicipio, &competencia); err != nil {
 			return nil, err
 		}
-		nomes = append(nomes, nome)
+		competencia_string := competencia.Format("02/01/2006")
+		infos := []string{cnes, nome, competencia_string}
+		estabelecimentos = append(estabelecimentos, infos)
 	}
 
-	return nomes, rows.Err()
+	return estabelecimentos, rows.Err()
 }
