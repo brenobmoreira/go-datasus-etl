@@ -17,6 +17,10 @@ Os dados são baixados via FTP do servidor público do DATASUS, convertidos do f
 - ✅ Conversão de arquivos `.dbc` → `.dbf` (formato dBase)
 - ✅ Parse de arquivos DBF para estruturas Go
 - ✅ Carga concorrente em PostgreSQL via canais
+- ✅ API REST com Gin para consulta de dados
+- ✅ Endpoint de sincronização sob demanda (`/sync`)
+- ✅ Consulta de estabelecimentos por município
+- ✅ Listagem de descrições de equipamentos
 - ✅ Exportação para CSV (opcional/debug)
 - ✅ Suporte a múltiplas competências e UFs
 
@@ -24,12 +28,15 @@ Os dados são baixados via FTP do servidor público do DATASUS, convertidos do f
 
 ```
 go-datasus-etl/
-├── main.go                      # Entry point e orquestração
+├── main.go                      # Entry point, API e orquestração
 ├── internal/
 │   ├── datasus/
 │   │   └── ftp_download.go      # Download FTP de arquivos .dbc
 │   ├── entities/
 │   │   └── model.go             # Modelos de dados
+│   ├── handlers/
+│   │   ├── descricoes.go        # Handler GET /descricoes
+│   │   └── sync.go              # Handler GET /sync
 │   ├── parser/
 │   │   ├── blast-dbf            # Binário conversor dbc→dbf
 │   │   ├── dbase_helpers.go     # Helpers conversão/leitura DBF
@@ -46,7 +53,6 @@ go-datasus-etl/
 │   ├── dbf/                     # Arquivos .dbf convertidos
 │   └── csv/                     # CSVs exportados
 └── assets/                      # Arquivos estáticos/base
-
 ```
 
 ## 🗄️ Schema do Banco de Dados
@@ -61,7 +67,7 @@ estabelecimento (PK: cnes, competencia)
 ├── codigo_municipio (TEXT)
 └── competencia (DATE)
 
-equipamento (PK: cnes, competencia)
+equipamento (PK: cnes, codigo_equipamento, competencia)
 ├── cnes (TEXT) → FK estabelecimento_cadastro
 ├── codigo_equipamento (TEXT)
 ├── quantidade_existente (INTEGER)
@@ -85,6 +91,7 @@ equipamento_descricao (PK: codigo)
 go get github.com/valentin-kaiser/go-dbase/dbase
 go get github.com/jlaffaye/ftp
 go get github.com/lib/pq
+go get github.com/gin-gonic/gin
 ```
 
 ## ⚙️ Instalação e Configuração
@@ -129,19 +136,62 @@ var downloadArchives = []datasus.Info{
 
 ## 🎯 Uso
 
-### Executar o ETL completo
+### Executar a aplicação
 ```bash
 go run .
 ```
 
-### Processo executado
-1. Download de arquivos `.dbc` do FTP DATASUS
-2. Conversão `.dbc` → `.dbf` usando `blast-dbf`
-3. Parse dos dados e envio via canais
-4. Inserção concorrente no PostgreSQL
-5. Geração de CSVs (opcional)
+A aplicação irá:
+1. Baixar e processar os dados do DATASUS
+2. Iniciar o servidor HTTP na porta 8080
 
-### Consultar dados processados
+### API Endpoints
+
+#### `GET /descricoes`
+Lista todas as descrições de equipamentos cadastrados.
+
+**Exemplo:**
+```bash
+curl http://localhost:8080/descricoes
+```
+
+**Resposta:**
+```json
+[
+  {
+    "CodigoEquipamento": "01",
+    "Descricao": "RAIO X ATÉ 100 mA"
+  },
+  ...
+]
+```
+
+#### `GET /estabelecimento/:codigo_municipio`
+Lista estabelecimentos de um município específico com CNES, nome e competência.
+
+**Exemplo:**
+```bash
+curl http://localhost:8080/estabelecimento/420005
+```
+
+**Resposta:**
+```json
+[
+  ["2675412", "SECRETARIA DE SAUDE DE ABDON BATISTA", "01/01/2025"],
+  ["7656033", "POSTO DE COLETA ABDON BATISTA", "01/01/2025"],
+  ...
+]
+```
+
+#### `GET /sync`
+Força uma nova sincronização dos dados do DATASUS.
+
+**Exemplo:**
+```bash
+curl http://localhost:8080/sync
+```
+
+### Consultar dados via PostgreSQL
 ```bash
 psql "host=localhost port=5432 user=postgres password=0000 dbname=godatabase sslmode=disable"
 ```
@@ -151,17 +201,28 @@ Exemplos de queries:
 -- Total de estabelecimentos cadastrados
 SELECT COUNT(*) FROM estabelecimento_cadastro;
 
--- Estabelecimentos por município
-SELECT codigo_municipio, COUNT(*) 
-FROM estabelecimento 
-GROUP BY codigo_municipio;
+-- Estabelecimentos por município com nome
+SELECT e.codigo_municipio, ec.nome, e.competencia
+FROM estabelecimento e
+JOIN estabelecimento_cadastro ec ON e.cnes = ec.cnes
+WHERE e.codigo_municipio = '420005'
+ORDER BY ec.nome;
 
--- Equipamentos por tipo
-SELECT e.codigo_equipamento, ed.descricao, SUM(e.quantidade_existente) as total
-FROM equipamento e
-LEFT JOIN equipamento_descricao ed ON e.codigo_equipamento = ed.codigo
-GROUP BY e.codigo_equipamento, ed.descricao
-ORDER BY total DESC;
+-- Equipamentos por estabelecimento
+SELECT ec.nome, eq.codigo_equipamento, ed.descricao, 
+       eq.quantidade_existente, eq.quantidade_uso
+FROM equipamento eq
+JOIN estabelecimento_cadastro ec ON eq.cnes = ec.cnes
+LEFT JOIN equipamento_descricao ed ON eq.codigo_equipamento = ed.codigo
+WHERE eq.cnes = '2675412';
+
+-- Top 10 equipamentos mais comuns
+SELECT ed.descricao, SUM(eq.quantidade_existente) as total
+FROM equipamento eq
+LEFT JOIN equipamento_descricao ed ON eq.codigo_equipamento = ed.codigo
+GROUP BY ed.descricao
+ORDER BY total DESC
+LIMIT 10;
 ```
 
 ## 📊 Tipos de Dados Processados
@@ -205,7 +266,8 @@ type Equipamentos struct {
 2. Implemente função `NovoParser(archive_name, blast, dir string)`
 3. Adicione entity correspondente em `internal/entities/model.go`
 4. Crie método `SalvarNovo()` em `internal/repository/database.go`
-5. Chame no `main.go`
+5. Adicione handler em `internal/handlers`
+6. Registre rota no `main.go`
 
 ## 🐛 Troubleshooting
 
@@ -215,24 +277,55 @@ type Equipamentos struct {
 
 ### Erro: "pq: duplicate key value violates unique constraint"
 - Dados já foram inseridos anteriormente
-- Solução: adicione `ON CONFLICT DO NOTHING` nas queries de inserção
+- Solução: O código já usa `ON CONFLICT DO UPDATE` para atualizar registros existentes
 
 ### Erro: "connection refused" (PostgreSQL)
 - Verifique se o container está rodando: `docker ps`
 - Inicie o container: `docker start godatabase`
 - Teste conexão: `psql "host=localhost port=5432 user=postgres password=0000 dbname=godatabase"`
 
+### API retorna erro 404
+- Verifique se o servidor está rodando na porta 8080
+- Confirme a URL: `http://localhost:8080/`
+
 ## 📝 Roadmap
 
-- [ ] Corrigir sincronização de canais e WaitGroup
-- [ ] Adicionar logging estruturado (zerolog/zap)
-- [ ] Implementar retry logic no FTP download
-- [ ] Suporte a mais UFs além de SC
-- [ ] API REST para consulta de dados
-- [ ] Dashboard web com métricas
-- [ ] Testes unitários e integração
-- [ ] CI/CD com GitHub Actions
-- [ ] Dockerização completa (multi-stage build)
+### 🎯 Prioridade Alta
+- [ ] **Parâmetros de sincronização**: Permitir escolher UF, ano e mês via endpoint `/sync?uf=SC&ano=25&mes=01`
+- [ ] **Variáveis de ambiente**: Mover credenciais do banco para `.env`
+- [ ] **Validação de entrada**: Validar códigos de município e parâmetros da API
+- [ ] **Tratamento de erros**: Melhorar mensagens de erro da API com códigos HTTP apropriados
+- [ ] **Logging estruturado**: Implementar zerolog ou zap para logs padronizados
+
+### 🚀 Médio Prazo
+- [ ] **Suporte multi-UF**: Processar todas as UFs do Brasil, não apenas SC
+- [ ] **Range de competências**: Baixar múltiplos meses/anos em uma única execução
+- [ ] **Cache de dados**: Implementar cache Redis para queries frequentes
+- [ ] **Paginação**: Adicionar paginação nos endpoints que retornam muitos registros
+- [ ] **Filtros avançados**: Permitir filtrar por tipo de equipamento, período, etc.
+- [ ] **Autenticação**: Implementar JWT para proteger endpoints sensíveis
+
+### 🔮 Longo Prazo
+- [ ] **Dashboard web**: Interface visual com gráficos e métricas (React/Vue)
+- [ ] **Notificações**: Alertas quando novos dados estiverem disponíveis
+- [ ] **Exportação de relatórios**: PDF/Excel com dados agregados
+- [ ] **API GraphQL**: Alternativa ao REST para queries complexas
+- [ ] **Suporte a outros datasets DATASUS**: SIA, SIH, SINASC, etc.
+- [ ] **Machine Learning**: Análise preditiva de demanda de equipamentos
+
+### 🧪 Qualidade e DevOps
+- [ ] **Testes unitários**: Cobertura mínima de 80%
+- [ ] **Testes de integração**: Validar fluxo completo do ETL
+- [ ] **CI/CD**: GitHub Actions para build, test e deploy
+- [ ] **Docker Compose**: Ambiente completo com um comando
+- [ ] **Kubernetes**: Manifests para deploy em produção
+- [ ] **Monitoramento**: Prometheus + Grafana para métricas
+- [ ] **Documentação API**: OpenAPI/Swagger
+
+### 🐛 Correções Conhecidas
+- [ ] **Sincronização de canais**: Corrigir WaitGroup e garantir que todos os goroutines finalizem
+- [ ] **Retry logic FTP**: Implementar tentativas automáticas em caso de falha no download
+- [ ] **Limpeza de arquivos temporários**: Deletar `.dbc` e `.dbf` após processamento
 
 ## 🤝 Contribuindo
 
@@ -243,6 +336,13 @@ Contribuições são bem-vindas! Por favor:
 4. Push para a branch (`git push origin feature/NovaFuncionalidade`)
 5. Abra um Pull Request
 
+**Áreas que precisam de ajuda:**
+- Testes automatizados
+- Documentação de código
+- Suporte a novas UFs
+- Performance do parser DBF
+- Interface web
+
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
@@ -252,6 +352,8 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 - [DATASUS FTP](ftp://ftp.datasus.gov.br/dissemin/publicos/CNES/200508_/Dados/)
 - [Documentação CNES](http://cnes.datasus.gov.br/)
 - [Dicionário de Dados DATASUS](http://tabnet.datasus.gov.br/tabdata/cadernos/cnes.htm)
+- [Documentação Go](https://go.dev/doc/)
+- [Gin Framework](https://gin-gonic.com/docs/)
 
 ## 👤 Autor
 
@@ -261,3 +363,5 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 ---
 
 ⭐ Se este projeto foi útil, considere dar uma estrela no repositório!
+
+💡 **Sugestões?** Abra uma [issue](https://github.com/brenobmoreira/go-datasus-etl/issues) ou contribua com código!
